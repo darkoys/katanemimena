@@ -1,63 +1,50 @@
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.ArrayList;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.*;
+import java.net.*;
+import java.nio.file.*;
 
 public class Application {
-
     public static void main(String[] args) {
+    	new Application().startApplication();
+    }
+    public void startApplication() {  
+    	
+    // The server hostname and port number
+        String serverHost = "localhost";
+        int serverPort = 8000;
+        
+        // The paths of the six GPX documents
+        String[] filePaths = {
+            "route1.gpx",
+            "route2.gpx",
+            "route3.gpx",
+            "route4.gpx",
+            "route5.gpx",
+            "route6.gpx"
+        };
+        
         try {
-            // Get a list of all GPX files in the "gpxs" directory
-            File directory = new File("gpxs");
-            File[] files = directory.listFiles((dir, name) -> name.endsWith(".gpx"));
-
-            // Establish a socket connection to the server
-            Socket socket = new Socket("localhost", 8000);
-            OutputStream outputStream = socket.getOutputStream();
-
-            for (File file : files) {
-                ArrayList<Waypoint> waypoints = new ArrayList<Waypoint>();
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-
-                // Parse the GPX file
-                Document document = builder.parse(file);
-                NodeList nodeList = document.getElementsByTagName("wpt");
-
-                // Extract the waypoint information
-                for (int i = 0; i < nodeList.getLength(); i++) {
-                    Element element = (Element) nodeList.item(i);
-                    double lat = Double.parseDouble(element.getAttribute("lat"));
-                    double lon = Double.parseDouble(element.getAttribute("lon"));
-                    double ele = Double.parseDouble(element.getElementsByTagName("ele").item(0).getTextContent());
-                    String time = element.getElementsByTagName("time").item(0).getTextContent();
-                    Waypoint waypoint = new Waypoint(lat, lon, ele, time);
-                    waypoints.add(waypoint);
-                }
-
-                // Send the waypoints to the server
-                for (Waypoint waypoint : waypoints) {
-                    String message = String.format("%.6f,%.6f,%.2f,%s,%s\n", waypoint.getLatitude(), waypoint.getLongitude(), waypoint.getElevation(), waypoint.getTimestamp(), file.getName());
-                    outputStream.write(message.getBytes());
-                }
+            // Create a socket connection to the server
+            Socket socket = new Socket(serverHost, serverPort);
+            System.out.println("Connected to server: " + serverHost + ":" + serverPort);
+            
+            // Loop through the GPX files and send them to the server
+            for (String filePath : filePaths) {
+                // Read the contents of the file
+                Path path = Paths.get(filePath);
+                byte[] fileBytes = Files.readAllBytes(path);
+                
+                // Send the file contents to the server
+                OutputStream outputStream = socket.getOutputStream();
+                outputStream.write(fileBytes);
+                outputStream.flush();
+                System.out.println("Sent file to server: " + filePath);
             }
-
-            // Close the output stream and socket connection
-            outputStream.close();
+            
+            // Close the socket connection
             socket.close();
-        } catch (Exception e) {
+            System.out.println("Disconnected from server");
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
-
-
-
-

@@ -1,11 +1,10 @@
-
-public class GPXCoordinates {
+class Waypoint {
     private double latitude;
     private double longitude;
     private double elevation;
     private String timestamp;
 
-    public GPXCoordinates(double latitude, double longitude, double elevation, String timestamp) {
+    public Waypoint(double latitude, double longitude, double elevation, String timestamp) {
         this.latitude = latitude;
         this.longitude = longitude;
         this.elevation = elevation;

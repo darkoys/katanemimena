@@ -1,87 +1,51 @@
-import java.io.File;
-import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.DocumentBuilder;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Node;
-import java.util.ArrayList;
-import java.util.List;
-	
-	public class Master {
+public class Master {
+    private int portNumber;
 
-		
-		
-		
-	    public static void main(String[] args) {
-	    	List<GPXCoordinates> gpxCoordinatesList = new ArrayList<>();
-	    	
-	    	try {
-	            // Create a new DocumentBuilderFactory
-	            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    public Master(int portNumber) {
+        this.portNumber = portNumber;
+    }
 
-	            // Use the factory to create a new DocumentBuilder
-	            DocumentBuilder builder = factory.newDocumentBuilder();
+    public void startServer() {
+        try {
+            // Create a server socket
+            ServerSocket serverSocket = new ServerSocket(portNumber);
 
-	            // Get a list of all GPX files in the gpxs directory
-	            File gpxDir = new File("gpxs");
-	            File[] gpxFiles = gpxDir.listFiles((dir, name) -> name.endsWith(".gpx"));
+            System.out.println("Server started on port " + portNumber);
 
-	            // Iterate over the GPX files and parse each one
-	            for (int i = 0; i < gpxFiles.length; i++) {
-	                File gpxFile = gpxFiles[i];
-	                System.out.println("Parsing file " + gpxFile.getName() + "...");
-	                
-	                // Parse the GPX file
-	                Document doc = builder.parse(gpxFile);
+            // Wait for a client to connect
+            Socket clientSocket = serverSocket.accept();
 
-	                // Get the creator of the GPX file
-	                String creator = doc.getDocumentElement().getAttribute("creator");
-	                //System.out.println("Creator: " + creator);
+            System.out.println("Client connected: " + clientSocket.getInetAddress().getHostName());
 
-	                // Get a list of all "wpt" elements in the document
-	                NodeList wptList = doc.getElementsByTagName("wpt");
+            // Create a reader to read from the client socket
+            BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-	                // Iterate over the "wpt" elements and print out the latitude, longitude, elevation, and timestamp data
-	                for (int j = 0; j < wptList.getLength(); j++) {
-	                    Node wptNode = wptList.item(j);
-	                    String latStr = wptNode.getAttributes().getNamedItem("lat").getNodeValue();
-	                    String lonStr = wptNode.getAttributes().getNamedItem("lon").getNodeValue();
-	                    String eleStr = wptNode.getChildNodes().item(1).getTextContent();
-	                    String time = wptNode.getChildNodes().item(3).getTextContent();
+            // Read messages from the client
+            String message;
+            while ((message = reader.readLine()) != null) {
+                System.out.println("Received waypoint: " + message);
+            }
 
-	                    // Convert latitude, longitude, and elevation strings to doubles
-	                    double latitude = Double.parseDouble(latStr);
-	                    double longitude = Double.parseDouble(lonStr);
-	                    double elevation = Double.parseDouble(eleStr);
+            // Close the reader and socket
+            reader.close();
+            clientSocket.close();
 
-	                    // Create a new GPXCoordinates object and add it to the list
-	                    GPXCoordinates gpxCoords = new GPXCoordinates(latitude, longitude, elevation, time);
-	                    gpxCoordinatesList.add(gpxCoords);
+            // Close the server socket
+            serverSocket.close();
 
-	                  /*  System.out.println("Waypoint " + (j+1) + ":");
-	                    System.out.println("Latitude: " + latStr);
-	                    System.out.println("Longitude: " + lonStr);
-	                    System.out.println("Elevation: " + eleStr);
-	                    System.out.println("Timestamp: " + time);
-	                    */
-	                }
-	            }
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	        }
-	    	
-	    	
-	    	for (GPXCoordinates gpxCoords : gpxCoordinatesList) {
-	    	    System.out.println("Latitude: " + gpxCoords.getLatitude());
-	    	    System.out.println("Longitude: " + gpxCoords.getLongitude());
-	    	    System.out.println("Elevation: " + gpxCoords.getElevation());
-	    	    System.out.println("Timestamp: " + gpxCoords.getTimestamp());
-	    	}
-	    	
-	    	
-	    }
-	}
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-
+    public static void main(String[] args) {
+        Master server = new Master(8000);
+        server.startServer();
+    }
+}
